@@ -112,8 +112,7 @@ class CodeCache : AllStatic {
 
   // CodeHeap management
   static void initialize_heaps();                             // Initializes the CodeHeaps
-  // Check the code heap sizes set by the user via command line
-  static void check_heap_sizes(size_t non_nmethod_size, size_t profiled_size, size_t non_profiled_size, size_t cache_size, bool all_set);
+  static void check_heap_size(const char* name, size_t item, size_t required);
   // Creates a new heap with the given name and size, containing CodeBlobs of the given type
   static void add_heap(ReservedSpace rs, const char* name, CodeBlobType code_blob_type);
   static CodeHeap* get_code_heap_containing(void* p);         // Returns the CodeHeap containing the given pointer, or nullptr
@@ -228,7 +227,7 @@ class CodeCache : AllStatic {
   static void print_internals();
   static void print_memory_overhead();
   static void verify();                          // verifies the code cache
-  static void print_trace(const char* event, CodeBlob* cb, int size = 0) PRODUCT_RETURN;
+  static void print_trace(const char* event, CodeBlob* cb, int size = 0);
   static void print_summary(outputStream* st, bool detailed = true); // Prints a summary of the code cache usage
   static void log_state(outputStream* st);
   LINUX_ONLY(static void write_perf_map();)
