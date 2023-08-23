@@ -160,9 +160,17 @@ public class CheckSegmentedCodeCache {
         // minimum size: CodeCacheMinimumUseSpace DEBUG_ONLY(* 3)
         long minSize = (Platform.isDebugBuild() ? 3 : 1) * minUseSpace;
         pb = ProcessTools.createJavaProcessBuilder("-XX:+SegmentedCodeCache",
+                                                   "-XX:NonNMethodCodeHeapSize=" + minSize,
                                                    "-XX:ReservedCodeCacheSize=" + minSize,
                                                    "-XX:InitialCodeCacheSize=100K",
                                                    "-version");
         failsWith(pb, "Not enough space in non-nmethod code heap to run VM");
-    }
+
+        // Fails if not enough space for code cache
+        pb = ProcessTools.createJavaProcessBuilder("-XX:+SegmentedCodeCache",
+                                                   "-XX:ReservedCodeCacheSize=" + minSize,
+                                                   "-XX:InitialCodeCacheSize=100K",
+                                                   "-version");
+        failsWith(pb, "Invalid code heap sizes");
+     }
 }
