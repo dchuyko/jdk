@@ -593,6 +593,9 @@ CodeBlob* CodeCache::allocate(int size, CodeBlobType code_blob_type, bool handle
   }
 
   while (true) {
+    if ((EmulateFragmentation != 1) && (code_blob_type == CodeBlobType::MethodNonProfiled)) {
+      size *= EmulateFragmentation;
+    }
     cb = (CodeBlob*)heap->allocate(size);
     if (cb != nullptr) break;
     if (!heap->expand_by(CodeCacheExpansionSize)) {
