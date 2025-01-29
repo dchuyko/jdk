@@ -2452,7 +2452,7 @@ OopMap* LinearScan::compute_oop_map(IntervalWalker* iw, LIR_Op* op, CodeEmitInfo
     if (op->is_patching() || op->id() < interval->current_to()) {
 
       // caller-save registers must not be included into oop-maps at calls
-      assert(!is_call_site || assigned_reg >= nof_regs || !is_caller_save(assigned_reg), "interval is in a caller-save register at a call -> register will be overwritten, is_call_site: %s, assigned_reg: %d, nof_regs: %d, is_caller_save: %s", is_call_site ? "y" : "n", assigned_reg, nof_regs, is_caller_save(assigned_reg));
+      assert(!is_call_site || assigned_reg >= nof_regs || !is_caller_save(assigned_reg), "interval is in a caller-save register at a call -> register will be overwritten, is_call_site: %s, assigned_reg: %d, nof_regs: %d, is_caller_save: %s", is_call_site ? "y" : "n", assigned_reg, nof_regs, is_caller_save(assigned_reg) ? "y" : "n");
 
       VMReg name = vm_reg_for_interval(interval);
       set_oop(map, name);
