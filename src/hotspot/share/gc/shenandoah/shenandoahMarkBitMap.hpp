@@ -127,7 +127,6 @@ private:
   template<bm_word_t flip, bool aligned_right>
   inline idx_t get_last_bit_impl(idx_t l_index, idx_t r_index) const;
 
-  inline idx_t get_next_one_offset (idx_t l_index, idx_t r_index) const;
   inline idx_t get_last_one_offset (idx_t l_index, idx_t r_index) const;
 
   // Helper for get_prev_{zero,one}_bit variants.

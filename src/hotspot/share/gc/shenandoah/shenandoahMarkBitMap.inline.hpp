@@ -301,6 +301,7 @@ inline ShenandoahMarkBitMap::idx_t ShenandoahMarkBitMap::get_last_bit_impl(idx_t
 
 inline ShenandoahMarkBitMap::idx_t ShenandoahMarkBitMap::get_last_one_offset(idx_t l_offset, idx_t r_offset) const {
   return get_last_bit_impl<find_ones_flip, false>(l_offset, r_offset);
+}
 
 inline ShenandoahMarkBitMap::idx_t ShenandoahMarkBitMap::get_prev_one_offset(idx_t l_offset, idx_t r_offset) const {
   return get_prev_bit_impl<find_ones_flip, false>(l_offset, r_offset);
