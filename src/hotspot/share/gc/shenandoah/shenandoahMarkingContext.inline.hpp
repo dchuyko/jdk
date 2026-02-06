@@ -83,6 +83,9 @@ inline HeapWord* ShenandoahMarkingContext::get_next_marked_addr(const HeapWord* 
 
 inline HeapWord* ShenandoahMarkingContext::get_last_marked_addr(const HeapWord* start, const HeapWord* limit) const {
   return _mark_bit_map.get_last_marked_addr(start, limit);
+
+inline HeapWord* ShenandoahMarkingContext::get_prev_marked_addr(const HeapWord* limit, const HeapWord* start) const {
+  return _mark_bit_map.get_prev_marked_addr(limit, start);
 }
 
 inline bool ShenandoahMarkingContext::allocated_after_mark_start(oop obj) const {
@@ -118,8 +121,8 @@ inline void ShenandoahMarkingContext::capture_top_at_mark_start(ShenandoahHeapRe
          "Region %zu, bitmap should be clear while adjusting TAMS: " PTR_FORMAT " -> " PTR_FORMAT,
          idx, p2i(old_tams), p2i(new_tams));
 */
-  log_debug(gc)("Capturing TAMS for %s Region %zu, was: " PTR_FORMAT ", now: " PTR_FORMAT,
-                r->affiliation_name(), idx, p2i(old_tams), p2i(new_tams));
+  log_debug(gc, mark)("Capturing TAMS for %s Region %zu, was: " PTR_FORMAT ", now: " PTR_FORMAT,
+                      r->affiliation_name(), idx, p2i(old_tams), p2i(new_tams));
 
   _top_at_mark_starts_base[idx] = new_tams;
   _top_bitmaps[idx] = new_tams;
