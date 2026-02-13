@@ -37,6 +37,9 @@ class ShenandoahLoadReferenceBarrierStub;
 class StubAssembler;
 #endif
 class StubCodeGenerator;
+#ifdef COMPILER2
+class MachNode;
+#endif // COMPILER2
 
 class ShenandoahBarrierSetAssembler: public BarrierSetAssembler {
 private:
@@ -60,13 +63,14 @@ public:
   void gen_load_reference_barrier_stub(LIR_Assembler* ce, ShenandoahLoadReferenceBarrierStub* stub);
   void generate_c1_pre_barrier_runtime_stub(StubAssembler* sasm);
   void generate_c1_load_reference_barrier_runtime_stub(StubAssembler* sasm, DecoratorSet decorators);
+  void generate_c1_cmpxchg_oop_runtime_stub(StubAssembler* sasm);
 #endif
 
   void load_reference_barrier(MacroAssembler* masm, Register dst, Address src, DecoratorSet decorators);
 
-  void cmpxchg_oop(MacroAssembler* masm,
-                   Register res, Address addr, Register oldval, Register newval,
-                   bool exchange, Register tmp1, Register tmp2);
+  void cmpxchg_oop_c2(const MachNode* node, MacroAssembler* masm,
+                      Register addr, Register expected, Register new_val, Register result,
+                      bool acquire, bool release, bool weak, bool is_cae);
   virtual void arraycopy_prologue(MacroAssembler* masm, DecoratorSet decorators, BasicType type,
                                   Register src, Register dst, Register count);
   virtual void arraycopy_epilogue(MacroAssembler* masm, DecoratorSet decorators, BasicType type,
