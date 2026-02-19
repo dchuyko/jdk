@@ -29,30 +29,30 @@
 #include "gc/shenandoah/c1/shenandoahBarrierSetC1.hpp"
 #include "gc/shenandoah/shenandoahBarrierSet.hpp"
 #include "gc/shenandoah/shenandoahBarrierSetAssembler.hpp"
+#include "gc/shenandoah/shenandoahHeap.hpp"
+#include "gc/shenandoah/shenandoahThreadLocalData.hpp"
 
-#define __ masm->masm()->
+#define __ ce->masm()->
 
-void LIR_OpShenandoahCompareAndSwap::emit_code(LIR_Assembler* masm) {
-  Register addr   = _addr->is_single_cpu() ? _addr->as_register() : _addr->as_register_lo();
+void LIR_OpShenandoahCompareAndSwap::emit_code(LIR_Assembler* ce) {
+  Register addr = _addr->is_single_cpu() ? _addr->as_register() : _addr->as_register_lo();
   Register newval = _new_value->as_register();
   Register cmpval = _cmp_value->as_register();
-  Register tmp1   = _tmp1->as_register();
-  Register tmp2   = _tmp2->as_register();
+  Register tmp1 = _tmp1->as_register();
+  Register tmp2 = _tmp2->as_register();
   Register result = result_opr()->as_register();
 
-  assert(cmpval == rax, "wrong register");
-  assert(newval != noreg, "new val must be register");
-  assert(cmpval != newval, "cmp and new values must be in different registers");
-  assert(cmpval != addr, "cmp and addr must be in different registers");
-  assert(newval != addr, "new value and addr must be in different registers");
+  assert_different_registers(result, addr, newval, cmpval, tmp1, tmp2);
 
   Label done;
 
   if (UseCompressedOops) {
-    __ encode_heap_oop(cmpval);
-    __ mov(rscratch1, newval);
-    __ encode_heap_oop(rscratch1);
-    newval = rscratch1;
+    __ mov(tmp1, cmpval);
+    __ encode_heap_oop(tmp1);
+    cmpval = tmp1;
+    __ mov(tmp2, newval);
+    __ encode_heap_oop(tmp2);
+    newval = tmp2;
   }
 
   __ lock();
@@ -66,15 +66,26 @@ void LIR_OpShenandoahCompareAndSwap::emit_code(LIR_Assembler* masm) {
   __ movzbl(result, result);
   __ jcc(Assembler::equal, done);
 
-  if (UseCompressedOops) {
-    __ movl(tmp1, cmpval);
-  } else {
-    __ movptr(tmp1, cmpval);
+  const Register thread = r15_thread;
+  Address gc_state(thread, in_bytes(ShenandoahThreadLocalData::gc_state_offset()));
+  __ testb(gc_state, ShenandoahHeap::HAS_FORWARDED_BITPOS);
+  __ jcc(Assembler::zero, done);
+
+  // Save rax unless it is the result or tmp register
+  // Set up SP to accommodate parameters and maybe rax
+  bool need_to_save_rax = (result != rax && tmp1 != rax && tmp2 != rax);
+  int reserve = align_up((need_to_save_rax ? 4 : 3) * BytesPerWord, StackAlignmentInBytes);
+
+  __ subptr(rsp, reserve);
+
+  if (need_to_save_rax) {
+    __ movptr(Address(rsp, 3 * BytesPerWord), rax);
   }
 
-  masm->store_parameter(addr, 0);
-  masm->store_parameter(cmpval, 1);
-  masm->store_parameter(newval, 2);
+  // Setup arguments and call runtime stub
+  ce->store_parameter(addr, 0);
+  ce->store_parameter(cmpval, 1);
+  ce->store_parameter(newval, 2);
 
   ShenandoahBarrierSetC1* bs =
       (ShenandoahBarrierSetC1*)BarrierSet::barrier_set()->barrier_set_c1();
@@ -82,12 +93,22 @@ void LIR_OpShenandoahCompareAndSwap::emit_code(LIR_Assembler* masm) {
 
   assert(result != cmpval, "cmp");
 
-  // Compare stub return (in rax) with saved expected (tmp1), not with cmpval (still rax).
-  __ movptr(result, rax);
+  // Move result into place
+  if (result != rax) {
+    __ mov(result, rax);
+  }
+
+  // Restore rax unless it is the result or tmp register
+  if (need_to_save_rax) {
+    __ movptr(rax, Address(rsp, 3 * BytesPerWord));
+  }
+
+  __ addptr(rsp, reserve);
+
   if (UseCompressedOops) {
-    __ cmpl(result, tmp1);
+    __ cmpl(result, cmpval);
   } else {
-    __ cmpptr(result, tmp1);
+    __ cmpptr(result, cmpval);
   }
   __ setcc(Assembler::equal, result);
   __ movzbl(result, result);
@@ -122,6 +143,7 @@ LIR_Opr ShenandoahBarrierSetC1::atomic_cmpxchg_at_resolved(LIRAccess& access, LI
     }
     if (ShenandoahCASBarrier) {
       cmp_value.load_item_force(FrameMap::rax_oop_opr);
+      // cmp_value.load_item();
       new_value.load_item();
 
       LIR_Opr t1 = gen->new_register(T_OBJECT);

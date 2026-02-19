@@ -992,25 +992,22 @@ void ShenandoahBarrierSetAssembler::generate_c1_load_reference_barrier_runtime_s
 }
 
 void ShenandoahBarrierSetAssembler::generate_c1_cmpxchg_oop_runtime_stub(StubAssembler* sasm) {
-  //__ prologue("shenandoah_cmpxchg_oop", false);
+  __ prologue("shenandoah_cmpxchg_oop", false);
 
-  //__ push_call_clobbered_registers();
-  //__ load_parameter(0, r0);
-  //__ load_parameter(1, r1);
-  //__ load_parameter(2, r2);
+  __ save_live_registers_no_oop_map(true /* save_fpu_registers */);
+  __ load_parameter(0, c_rarg0);
+  __ load_parameter(1, c_rarg1);
+  __ load_parameter(2, c_rarg2);
 
-  //if (UseCompressedOops) {
-  //  __ mov(lr, CAST_FROM_FN_PTR(address, ShenandoahRuntime::cmpxchg_oop_narrow));
-  //} else {
-  //__ mov(lr, CAST_FROM_FN_PTR(address, ShenandoahRuntime::cmpxchg_oop));
-  //}
-  //__ blr(lr);
+  if (UseCompressedOops) {
+    __ call(RuntimeAddress(CAST_FROM_FN_PTR(address, ShenandoahRuntime::cmpxchg_oop_narrow)));
+  } else {
+    __ call(RuntimeAddress(CAST_FROM_FN_PTR(address, ShenandoahRuntime::cmpxchg_oop)));
+  }
 
-  //__ mov(rscratch1, r0);
-  //__ pop_call_clobbered_registers();
-  //__ mov(r0, rscratch1);
+  __ restore_live_registers_except_rax(true /* restore_fpu_registers */);
 
-  //__ epilogue();
+  __ epilogue();
 }
 
 #undef __
