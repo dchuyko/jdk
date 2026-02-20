@@ -143,16 +143,15 @@ LIR_Opr ShenandoahBarrierSetC1::atomic_cmpxchg_at_resolved(LIRAccess& access, LI
     }
     if (ShenandoahCASBarrier) {
       cmp_value.load_item_force(FrameMap::rax_oop_opr);
-      // cmp_value.load_item();
       new_value.load_item();
 
       LIR_Opr t1 = gen->new_register(T_OBJECT);
       LIR_Opr t2 = gen->new_register(T_OBJECT);
-      LIR_Opr t3 = gen->new_register(T_OBJECT);
+      LIR_Opr noreg = LIR_OprFact::illegalOpr; // t3 is not used
       LIR_Opr addr = access.resolved_addr()->as_address_ptr()->base();
       LIR_Opr result = gen->new_register(T_INT);
 
-      __ append(new LIR_OpShenandoahCompareAndSwap(addr, cmp_value.result(), new_value.result(), t1, t2, t3, result));
+      __ append(new LIR_OpShenandoahCompareAndSwap(addr, cmp_value.result(), new_value.result(), t1, t2, noreg, result));
 
       if (ShenandoahCardBarrier) {
         post_barrier(access, access.resolved_addr(), new_value.result());
