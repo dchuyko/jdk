@@ -632,19 +632,16 @@ void ShenandoahCASBarrierSlowStubC2::emit_code(MacroAssembler& masm) {
   const Register thread = r15_thread;
   Address gc_state(thread, in_bytes(ShenandoahThreadLocalData::gc_state_offset()));
 
-  __ testb(gc_state, ShenandoahHeap::HAS_FORWARDED);
+  __ testb(gc_state, ShenandoahHeap::HAS_FORWARDED_BITPOS);
   __ jcc(Assembler::notZero, runtime);
   __ jmp(*continuation());
 
   __ bind(runtime);
   {
     SaveLiveRegisters save_live_registers(&masm, this);
-
+    // Setup c_rarg0 to hold addr.
     Register expected = _expected;
     Register new_val  = _new_val;
-
-    // --- Shuffling ABI regs (rdi, rsi, rdx) ---
-    // c_rarg0 = addr
     if (c_rarg0 != _addr) {
       if (c_rarg0 == expected) {
         __ movptr(rscratch1, expected);
@@ -655,7 +652,7 @@ void ShenandoahCASBarrierSlowStubC2::emit_code(MacroAssembler& masm) {
       }
       __ movptr(c_rarg0, _addr);
     }
-
+    // Setup c_rarg1 to hold expected.
     if (c_rarg1 != expected) {
       if (c_rarg1 == new_val) {
         __ movptr(rscratch1, new_val);
@@ -667,7 +664,7 @@ void ShenandoahCASBarrierSlowStubC2::emit_code(MacroAssembler& masm) {
         __ movptr(c_rarg1, expected);
       }
     }
-
+    // Setup c_rarg2 to hold new_val.
     if (c_rarg2 != new_val) {
       if (UseCompressedOops) {
         __ movl(c_rarg2, new_val);

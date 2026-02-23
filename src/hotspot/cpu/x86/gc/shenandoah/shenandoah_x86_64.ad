@@ -130,7 +130,7 @@ instruct compareAndExchangeN_shenandoah(rRegI result,
 
 instruct compareAndExchangeP_shenandoah(rRegI result,
                                         indirect mem,
-                                        rRegP rscratch2,
+                                        r11_RegL rscratch2,
                                         rax_RegP oldval, rRegP newval,
                                         rFlagsReg cr)
 %{
