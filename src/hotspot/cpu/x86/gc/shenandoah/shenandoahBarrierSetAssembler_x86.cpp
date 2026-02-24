@@ -644,19 +644,19 @@ void ShenandoahCASBarrierSlowStubC2::emit_code(MacroAssembler& masm) {
     Register new_val  = _new_val;
     if (c_rarg0 != _addr) {
       if (c_rarg0 == expected) {
-        __ movptr(rscratch1, expected);
-        expected = rscratch1;
+        __ movptr(_tmp, expected);
+        expected = _tmp;
       } else if (c_rarg0 == new_val) {
-        __ movptr(rscratch1, new_val);
-        new_val = rscratch1;
+        __ movptr(_tmp, new_val);
+        new_val = _tmp;
       }
       __ movptr(c_rarg0, _addr);
     }
     // Setup c_rarg1 to hold expected.
     if (c_rarg1 != expected) {
       if (c_rarg1 == new_val) {
-        __ movptr(rscratch1, new_val);
-        new_val = rscratch1;
+        __ movptr(_tmp, new_val);
+        new_val = _tmp;
       }
       if (UseCompressedOops) {
         __ movl(c_rarg1, expected);
@@ -679,21 +679,21 @@ void ShenandoahCASBarrierSlowStubC2::emit_code(MacroAssembler& masm) {
       __ call(RuntimeAddress(CAST_FROM_FN_PTR(address, ShenandoahRuntime::cmpxchg_oop)));
     }
 
-    __ movptr(rscratch1, rax);
+    __ movptr(_tmp, rax);
   }
 
   if (_cae) {
     // CompareAndExchange: return value itself (witness)
     if (UseCompressedOops) {
-      __ movl(_result, rscratch1);
+      __ movl(_result, _tmp);
     } else {
-      __ movptr(_result, rscratch1);
+      __ movptr(_result, _tmp);
     }
   } else {
     if (UseCompressedOops) {
-      __ cmpl(rscratch1, _expected);
+      __ cmpl(_tmp, _expected);
     } else {
-      __ cmpptr(rscratch1, _expected);
+      __ cmpptr(_tmp, _expected);
     }
     // set (and extend to full reg) the result byte
     __ setb(Assembler::equal, _result);
@@ -724,14 +724,15 @@ void ShenandoahBarrierSetAssembler::cmpxchg_oop_c2(const MachNode* node,
                                                    Register expected,
                                                    Register new_val,
                                                    Register result,
+                                                   Register tmp,
                                                    bool acquire, bool release, bool weak,
                                                    bool is_cae) {
-  Register tmp = rscratch2;
-
   assert_different_registers(addr, expected, result, tmp);
   assert_different_registers(addr, new_val,  result, tmp);
 
   ShenandoahCASBarrierSlowStubC2* const slow_stub = ShenandoahCASBarrierSlowStubC2::create(node, addr, expected, new_val, result, tmp, is_cae);
+  // tmp is used to propagate the runtime call result.
+  slow_stub->dont_preserve(tmp);
 
   // Try to CAS with given arguments.  If successful, then we are done.
   __ lock();

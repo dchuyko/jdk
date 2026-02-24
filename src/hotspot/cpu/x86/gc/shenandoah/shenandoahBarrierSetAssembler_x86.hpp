@@ -69,7 +69,7 @@ public:
   void load_reference_barrier(MacroAssembler* masm, Register dst, Address src, DecoratorSet decorators);
 
   void cmpxchg_oop_c2(const MachNode* node, MacroAssembler* masm,
-                      Register addr, Register expected, Register new_val, Register result,
+                      Register addr, Register expected, Register new_val, Register result, Register tmp,
                       bool acquire, bool release, bool weak, bool is_cae);
   virtual void arraycopy_prologue(MacroAssembler* masm, DecoratorSet decorators, BasicType type,
                                   Register src, Register dst, Register count);

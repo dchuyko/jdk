@@ -29,19 +29,19 @@ source_hpp %{
 
 instruct compareAndSwapP_shenandoah(rRegI result,
                                     indirect mem,
-                                    r11_RegL rscratch2,
                                     rax_RegP oldval, rRegP newval,
+                                    rRegL tmp,
                                     rFlagsReg cr)
 %{
   match(Set result (CompareAndSwapP mem (Binary oldval newval)));
   predicate(UseShenandoahGC && n->as_LoadStore()->barrier_data() != 0);
-  effect(TEMP_DEF rscratch2, TEMP_DEF result, KILL cr, KILL oldval);
+  effect(TEMP_DEF tmp, TEMP_DEF result, KILL cr, KILL oldval);
 
   format %{ "cmpxchg_shenandoah $mem, $oldval, $newval\t# (ptr) if $mem == $oldval then $mem <-- $newval" %}
 
   ins_encode %{
     ShenandoahBarrierSet::assembler()->cmpxchg_oop_c2(this, masm,
-                                                      $mem$$base$$Register, $oldval$$Register, $newval$$Register, $result$$Register,
+                                                      $mem$$base$$Register, $oldval$$Register, $newval$$Register, $result$$Register, $tmp$$Register,
                                                       /*acquire*/ false, /*release*/ true, /*weak*/ false, /*is_cae*/ false);
 
   %}
@@ -50,19 +50,19 @@ instruct compareAndSwapP_shenandoah(rRegI result,
 
 instruct weakCompareAndSwapP_shenandoah(rRegI result,
                                         indirect mem,
-                                        r11_RegL rscratch2,
                                         rax_RegP oldval, rRegP newval,
+                                        rRegL tmp,
                                         rFlagsReg cr)
 %{
   match(Set result (WeakCompareAndSwapP mem (Binary oldval newval)));
   predicate(UseShenandoahGC && n->as_LoadStore()->barrier_data() != 0);
-  effect(TEMP_DEF rscratch2, TEMP_DEF result, KILL cr, KILL oldval);
+  effect(TEMP_DEF tmp, TEMP_DEF result, KILL cr, KILL oldval);
 
   format %{ "cmpxchg_shenandoah $result = $mem, $oldval, $newval\t# (ptr, weak) if $mem == $oldval then $mem <-- $newval" %}
 
   ins_encode %{
     ShenandoahBarrierSet::assembler()->cmpxchg_oop_c2(this, masm,
-                                                      $mem$$base$$Register, $oldval$$Register, $newval$$Register, $result$$Register,
+                                                      $mem$$base$$Register, $oldval$$Register, $newval$$Register, $result$$Register, $tmp$$Register,
                                                       /*acquire*/ false, /*release*/ true, /*weak*/ true, /*is_cae*/ false);
   %}
   ins_pipe( pipe_cmpxchg );
@@ -70,19 +70,19 @@ instruct weakCompareAndSwapP_shenandoah(rRegI result,
 
 instruct compareAndSwapN_shenandoah(rRegI result,
                                     indirect mem,
-                                    r11_RegL rscratch2,
                                     rax_RegN oldval, rRegN newval,
+                                    rRegL tmp,
                                     rFlagsReg cr)
 %{
   match(Set result (CompareAndSwapN mem (Binary oldval newval)));
   predicate(UseShenandoahGC && n->as_LoadStore()->barrier_data() != 0);
-  effect(TEMP_DEF rscratch2, TEMP_DEF result, KILL cr, KILL oldval);
+  effect(TEMP_DEF tmp, TEMP_DEF result, KILL cr, KILL oldval);
 
   format %{ "cmpxchg_shenandoah $mem, $oldval, $newval\t# (ptr) if $mem == $oldval then $mem <-- $newval" %}
 
   ins_encode %{
     ShenandoahBarrierSet::assembler()->cmpxchg_oop_c2(this, masm,
-                                                      $mem$$base$$Register, $oldval$$Register, $newval$$Register, $result$$Register,
+                                                      $mem$$base$$Register, $oldval$$Register, $newval$$Register, $result$$Register, $tmp$$Register,
                                                       /*acquire*/ false, /*release*/ true, /*weak*/ false, /*is_cae*/ false);
   %}
   ins_pipe( pipe_cmpxchg );
@@ -90,19 +90,19 @@ instruct compareAndSwapN_shenandoah(rRegI result,
 
 instruct weakCompareAndSwapN_shenandoah(rRegI result,
                                         indirect mem,
-                                        r11_RegL rscratch2,
                                         rax_RegN oldval, rRegN newval,
+                                        rRegL tmp,
                                         rFlagsReg cr)
 %{
   match(Set result (WeakCompareAndSwapN mem (Binary oldval newval)));
   predicate(UseShenandoahGC && n->as_LoadStore()->barrier_data() != 0);
-  effect(TEMP_DEF rscratch2, TEMP_DEF result, KILL cr, KILL oldval);
+  effect(TEMP_DEF tmp, TEMP_DEF result, KILL cr, KILL oldval);
 
   format %{ "cmpxchgw_shenandoah $result = $mem, $oldval, $newval\t# (narrow oop, weak) if $mem == $oldval then $mem <-- $newval" %}
 
   ins_encode %{
     ShenandoahBarrierSet::assembler()->cmpxchg_oop_c2(this, masm,
-                                                      $mem$$base$$Register, $oldval$$Register, $newval$$Register, $result$$Register,
+                                                      $mem$$base$$Register, $oldval$$Register, $newval$$Register, $result$$Register, $tmp$$Register,
                                                       /*acquire*/ false, /*release*/ true, /*weak*/ true, /*is_cae*/ false);
   %}
   ins_pipe( pipe_cmpxchg );
@@ -110,19 +110,19 @@ instruct weakCompareAndSwapN_shenandoah(rRegI result,
 
 instruct compareAndExchangeN_shenandoah(rRegI result,
                                         indirect mem,
-                                        r11_RegL rscratch2,
                                         rax_RegN oldval, rRegN newval,
+                                        rRegL tmp,
                                         rFlagsReg cr)
 %{
   match(Set oldval (CompareAndExchangeN mem (Binary oldval newval)));
   predicate(UseShenandoahGC && n->as_LoadStore()->barrier_data() != 0);
-  effect(TEMP_DEF rscratch2, TEMP_DEF result, KILL cr, KILL oldval);
+  effect(TEMP_DEF tmp, TEMP_DEF result, KILL cr, KILL oldval);
 
   format %{ "cmpxchgw_shenandoah $result = $mem, $oldval, $newval\t# (narrow oop, weak) if $mem == $oldval then $mem <-- $newval" %}
 
   ins_encode %{
     ShenandoahBarrierSet::assembler()->cmpxchg_oop_c2(this, masm,
-                                                      $mem$$base$$Register, $oldval$$Register, $newval$$Register, $result$$Register,
+                                                      $mem$$base$$Register, $oldval$$Register, $newval$$Register, $result$$Register, $tmp$$Register,
                                                       /*acquire*/ false, /*release*/ true, /*weak*/ false, /*is_cae*/ true);
   %}
   ins_pipe( pipe_cmpxchg );
@@ -130,20 +130,20 @@ instruct compareAndExchangeN_shenandoah(rRegI result,
 
 instruct compareAndExchangeP_shenandoah(rRegI result,
                                         indirect mem,
-                                        r11_RegL rscratch2,
                                         rax_RegP oldval, rRegP newval,
+                                        rRegL tmp,
                                         rFlagsReg cr)
 %{
   match(Set oldval (CompareAndExchangeP mem (Binary oldval newval)));
   predicate(UseShenandoahGC && n->as_LoadStore()->barrier_data() != 0);
-  effect(TEMP_DEF rscratch2, TEMP_DEF result, KILL cr, KILL oldval);
+  effect(TEMP_DEF tmp, TEMP_DEF result, KILL cr, KILL oldval);
   ins_cost(1000);
 
   format %{ "cmpxchg_shenandoah $mem, $oldval, $newval\t# (ptr) if $mem == $oldval then $mem <-- $newval" %}
 
   ins_encode %{
     ShenandoahBarrierSet::assembler()->cmpxchg_oop_c2(this, masm,
-                                                      $mem$$base$$Register, $oldval$$Register, $newval$$Register, $result$$Register,
+                                                      $mem$$base$$Register, $oldval$$Register, $newval$$Register, $result$$Register, $tmp$$Register,
                                                       /*acquire*/ false, /*release*/ true, /*weak*/ false, /*is_cae*/ true);
   %}
   ins_pipe( pipe_cmpxchg );
