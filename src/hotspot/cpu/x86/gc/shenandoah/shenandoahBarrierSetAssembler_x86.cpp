@@ -622,88 +622,6 @@ void ShenandoahBarrierSetAssembler::try_resolve_jobject_in_native(MacroAssembler
 }
 
 #undef __
-#define __ masm.
-
-void ShenandoahCASBarrierSlowStubC2::emit_code(MacroAssembler& masm) {
-
-  __ bind(*entry());
-
-  Label runtime;
-  const Register thread = r15_thread;
-  Address gc_state(thread, in_bytes(ShenandoahThreadLocalData::gc_state_offset()));
-
-  __ testb(gc_state, ShenandoahHeap::HAS_FORWARDED_BITPOS);
-  __ jcc(Assembler::notZero, runtime);
-  __ jmp(*continuation());
-
-  __ bind(runtime);
-  {
-    SaveLiveRegisters save_live_registers(&masm, this);
-    // Setup c_rarg0 to hold addr.
-    Register expected = _expected;
-    Register new_val  = _new_val;
-    if (c_rarg0 != _addr) {
-      if (c_rarg0 == expected) {
-        __ movptr(_tmp, expected);
-        expected = _tmp;
-      } else if (c_rarg0 == new_val) {
-        __ movptr(_tmp, new_val);
-        new_val = _tmp;
-      }
-      __ movptr(c_rarg0, _addr);
-    }
-    // Setup c_rarg1 to hold expected.
-    if (c_rarg1 != expected) {
-      if (c_rarg1 == new_val) {
-        __ movptr(_tmp, new_val);
-        new_val = _tmp;
-      }
-      if (UseCompressedOops) {
-        __ movl(c_rarg1, expected);
-      } else {
-        __ movptr(c_rarg1, expected);
-      }
-    }
-    // Setup c_rarg2 to hold new_val.
-    if (c_rarg2 != new_val) {
-      if (UseCompressedOops) {
-        __ movl(c_rarg2, new_val);
-      } else {
-        __ movptr(c_rarg2, new_val);
-      }
-    }
-
-    if (UseCompressedOops) {
-      __ call(RuntimeAddress(CAST_FROM_FN_PTR(address, ShenandoahRuntime::cmpxchg_oop_narrow)));
-    } else {
-      __ call(RuntimeAddress(CAST_FROM_FN_PTR(address, ShenandoahRuntime::cmpxchg_oop)));
-    }
-
-    __ movptr(_tmp, rax);
-  }
-
-  if (_cae) {
-    // CompareAndExchange: return value itself (witness)
-    if (UseCompressedOops) {
-      __ movl(_result, _tmp);
-    } else {
-      __ movptr(_result, _tmp);
-    }
-  } else {
-    if (UseCompressedOops) {
-      __ cmpl(_tmp, _expected);
-    } else {
-      __ cmpptr(_tmp, _expected);
-    }
-    // set (and extend to full reg) the result byte
-    __ setb(Assembler::equal, _result);
-    __ movzbl(_result, _result);
-  }
-
-  __ jmp(*continuation());
-}
-
-#undef __
 #define __ masm->
 
 // Implements CAS on references for the C2 CAS intrinsics.
@@ -742,27 +660,80 @@ void ShenandoahBarrierSetAssembler::cmpxchg_oop_c2(const MachNode* node,
     __ cmpxchgptr(new_val, Address(addr, 0));
   }
 
-  if (is_cae) {
-    // CompareAndExchange: result is what was in memory (witness).
-    // CAS success - RAX contains 'expected'
-    //  no success - RAX contains actual value.
-    if (result != rax) {
-      if (UseCompressedOops) {
-        __ movl(result, rax);
-      } else {
-        __ movptr(result, rax);
-      }
-    }
-  } else {
-    // CompareAndSwap (boolean): 1 fo success (ZF=1), 0 for fail.
-    __ setb(Assembler::equal, result);
-    __ movzbl(result, result);
+  if (!is_cae) {
+    __ setcc(Assembler::equal, result);
   }
 
   __ jcc(Assembler::notEqual, *slow_stub->entry());
 
   __ bind(*slow_stub->continuation());
 }
+
+#undef __
+#define __ masm.
+
+void ShenandoahCASBarrierSlowStubC2::emit_code(MacroAssembler& masm) {
+
+  __ bind(*entry());
+
+  Label runtime;
+  const Register thread = r15_thread;
+  Address gc_state(thread, in_bytes(ShenandoahThreadLocalData::gc_state_offset()));
+
+  __ testb(gc_state, ShenandoahHeap::HAS_FORWARDED_BITPOS);
+  __ jcc(Assembler::notZero, runtime);
+  __ jmp(*continuation());
+
+  __ bind(runtime);
+  {
+    SaveLiveRegisters save_live_registers(&masm, this);
+    // Setup c_rarg0 to hold addr.
+    Register expected = _expected;
+    Register new_val  = _new_val;
+    if (c_rarg0 != _addr) {
+      if (c_rarg0 == expected) {
+        __ movptr(_tmp, expected);
+        expected = _tmp;
+      } else if (c_rarg0 == new_val) {
+        __ movptr(_tmp, new_val);
+        new_val = _tmp;
+      }
+      __ movptr(c_rarg0, _addr);
+    }
+    // Setup c_rarg1 to hold expected.
+    if (c_rarg1 != expected) {
+      if (c_rarg1 == new_val) {
+        __ movptr(_tmp, new_val);
+        new_val = _tmp;
+      }
+      __ movptr(c_rarg1, expected);
+    }
+    // Setup c_rarg2 to hold new_val.
+    __ movptr(c_rarg2, new_val);
+
+    if (UseCompressedOops) {
+      __ call(RuntimeAddress(CAST_FROM_FN_PTR(address, ShenandoahRuntime::cmpxchg_oop_narrow)));
+    } else {
+      __ call(RuntimeAddress(CAST_FROM_FN_PTR(address, ShenandoahRuntime::cmpxchg_oop)));
+    }
+
+    __ movptr(_tmp, rax);
+  }
+
+  if (!_cae) {
+    if (UseCompressedOops) {
+      __ cmpl(_tmp, _expected);
+    } else {
+      __ cmpptr(_tmp, _expected);
+    }
+    __ setcc(Assembler::equal, _result);
+  }
+
+  __ jmp(*continuation());
+}
+
+#undef __
+#define __ masm->
 
 #ifdef PRODUCT
 #define BLOCK_COMMENT(str) /* nothing */
@@ -991,8 +962,7 @@ void ShenandoahBarrierSetAssembler::generate_c1_load_reference_barrier_runtime_s
 
 void ShenandoahBarrierSetAssembler::generate_c1_cmpxchg_oop_runtime_stub(StubAssembler* sasm) {
   __ prologue("shenandoah_cmpxchg_oop", false);
-
-  __ save_live_registers_no_oop_map(true /* save_fpu_registers */);
+  __ push_call_clobbered_registers();
   __ load_parameter(0, c_rarg0);
   __ load_parameter(1, c_rarg1);
   __ load_parameter(2, c_rarg2);
@@ -1003,8 +973,7 @@ void ShenandoahBarrierSetAssembler::generate_c1_cmpxchg_oop_runtime_stub(StubAss
     __ call(RuntimeAddress(CAST_FROM_FN_PTR(address, ShenandoahRuntime::cmpxchg_oop)));
   }
 
-  __ restore_live_registers_except_rax(true /* restore_fpu_registers */);
-
+  __ pop_call_clobbered_registers();
   __ epilogue();
 }
 

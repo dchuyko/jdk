@@ -111,7 +111,6 @@ void LIR_OpShenandoahCompareAndSwap::emit_code(LIR_Assembler* ce) {
     __ cmpptr(result, cmpval);
   }
   __ setcc(Assembler::equal, result);
-  __ movzbl(result, result);
 
   __ bind(done);
 

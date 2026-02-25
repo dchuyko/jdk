@@ -67,10 +67,11 @@ public:
 #endif
 
   void load_reference_barrier(MacroAssembler* masm, Register dst, Address src, DecoratorSet decorators);
-
+#ifdef COMPILER2
   void cmpxchg_oop_c2(const MachNode* node, MacroAssembler* masm,
                       Register addr, Register expected, Register new_val, Register result, Register tmp,
                       bool acquire, bool release, bool weak, bool is_cae);
+#endif
   virtual void arraycopy_prologue(MacroAssembler* masm, DecoratorSet decorators, BasicType type,
                                   Register src, Register dst, Register count);
   virtual void arraycopy_epilogue(MacroAssembler* masm, DecoratorSet decorators, BasicType type,
