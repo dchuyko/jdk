@@ -39,20 +39,17 @@ void LIR_OpShenandoahCompareAndSwap::emit_code(LIR_Assembler* ce) {
   Register newval = _new_value->as_register();
   Register cmpval = _cmp_value->as_register();
   Register tmp1 = _tmp1->as_register();
-  Register tmp2 = _tmp2->as_register();
   Register result = result_opr()->as_register();
 
-  assert_different_registers(result, addr, newval, cmpval, tmp1, tmp2);
+  assert_different_registers(result, addr, newval, cmpval, tmp1);
 
   Label done;
 
   if (UseCompressedOops) {
-    __ mov(tmp1, cmpval);
+    __ encode_heap_oop(cmpval); // rax
+    __ mov(tmp1, newval);
     __ encode_heap_oop(tmp1);
-    cmpval = tmp1;
-    __ mov(tmp2, newval);
-    __ encode_heap_oop(tmp2);
-    newval = tmp2;
+    newval = tmp1;
   }
 
   __ lock();
@@ -73,7 +70,7 @@ void LIR_OpShenandoahCompareAndSwap::emit_code(LIR_Assembler* ce) {
 
   // Save rax unless it is the result or tmp register
   // Set up SP to accommodate parameters and maybe rax
-  bool need_to_save_rax = (result != rax && tmp1 != rax && tmp2 != rax);
+  bool need_to_save_rax = (result != rax && tmp1 != rax);
   int reserve = align_up((need_to_save_rax ? 4 : 3) * BytesPerWord, StackAlignmentInBytes);
 
   __ subptr(rsp, reserve);
@@ -145,12 +142,11 @@ LIR_Opr ShenandoahBarrierSetC1::atomic_cmpxchg_at_resolved(LIRAccess& access, LI
       new_value.load_item();
 
       LIR_Opr t1 = gen->new_register(T_OBJECT);
-      LIR_Opr t2 = gen->new_register(T_OBJECT);
-      LIR_Opr noreg = LIR_OprFact::illegalOpr; // t3 is not used
+      LIR_Opr noreg = LIR_OprFact::illegalOpr; // t2, t3 are not used
       LIR_Opr addr = access.resolved_addr()->as_address_ptr()->base();
       LIR_Opr result = gen->new_register(T_INT);
 
-      __ append(new LIR_OpShenandoahCompareAndSwap(addr, cmp_value.result(), new_value.result(), t1, t2, noreg, result));
+      __ append(new LIR_OpShenandoahCompareAndSwap(addr, cmp_value.result(), new_value.result(), t1, noreg, noreg, result));
 
       if (ShenandoahCardBarrier) {
         post_barrier(access, access.resolved_addr(), new_value.result());
